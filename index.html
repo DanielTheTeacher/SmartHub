@@ -192,14 +192,19 @@
       oninput="document.getElementById('dVal').innerText=this.value"
       onchange="send('LP:SET_DIMMER,7,'+this.value+';')">
 
-    <div class="label">IR LED-stripe</div>
+<div class="label">IR LED-stripe</div>
+    <div class="seg-4" style="margin-bottom:8px">
+      <button onclick="send('LP:SET_DIMMER,9,ON;')">PÅ</button>
+      <button onclick="send('LP:SET_DIMMER,9,OFF;')">AV</button>
+      <button onclick="send('LP:SET_DIMMER,9,DOWN;')">− Lavere</button>
+      <button onclick="send('LP:SET_DIMMER,9,UP;')">+ Høyere</button>
+    </div>
     <div class="seg-4" id="led-group">
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,0;')">Av/På</button>
       <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,25;')">25%</button>
       <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,50;')">50%</button>
+      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,75;')">75%</button>
       <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,100;')">100%</button>
     </div>
-  </div>
 
   <div id="toast">Sendt</div>
 
