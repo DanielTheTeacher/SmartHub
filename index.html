@@ -1,3 +1,4 @@
+const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -38,6 +39,7 @@
     padding: 12px 8px; border-radius: 12px; font-size: 0.88rem; font-weight: 600;
     cursor: pointer; transition: 0.15s;
   }
+  button:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
   button:active { transform: scale(0.96); }
   button.active { background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: var(--accent); }
   button.power-on.active { background: rgba(34, 197, 94, 0.18); color: var(--green); border-color: var(--green); }
@@ -64,10 +66,49 @@
   .pill-group { display: flex; gap: 6px; }
   .pill-group button { padding: 8px 16px; font-size: 0.85rem; }
   input[type=range] { width: 100%; accent-color: var(--accent); height: 6px; background: var(--bg); border-radius: 8px; margin-top: 6px; }
+
+  /* TV HERO PANEL (Hidden on mobile, centered on TV / wide screens) */
+  #tv-hero { display: none; }
+  body.tv-mode {
+    max-width: 1100px; min-height: 92vh;
+    display: flex; flex-direction: column; justify-content: center; padding: 32px;
+  }
+  body.tv-mode #tv-hero {
+    display: flex; flex-direction: column; gap: 24px;
+    background: var(--card); border: 2px solid var(--border);
+    border-radius: 32px; padding: 44px; margin-bottom: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .tv-kino-btn {
+    font-size: 3.2rem; font-weight: 800; padding: 56px 32px; border-radius: 24px;
+    background: linear-gradient(135deg, #0284c7, #38bdf8); color: #090d16;
+    border: 4px solid transparent; box-shadow: 0 12px 35px rgba(56, 189, 248, 0.25);
+  }
+  .tv-kino-btn:focus, .tv-kino-btn:hover {
+    border-color: #ffffff; transform: scale(1.02);
+  }
+  .tv-sub-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .tv-sub-btn {
+    font-size: 1.75rem; font-weight: 700; padding: 34px 20px;
+    border-radius: 20px; background: var(--btn); border: 3px solid var(--border);
+  }
+  .tv-sub-btn:focus, .tv-sub-btn:hover {
+    border-color: var(--accent); background: #26354d;
+  }
+  body.tv-mode.hide-details #phone-controls { display: none; }
+  body.tv-mode #phone-controls {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start;
+  }
+  #tv-toggle-all {
+    display: none; margin: 0 auto; background: transparent;
+    color: var(--muted); border: 1px solid var(--border); padding: 10px 24px;
+  }
+  body.tv-mode #tv-toggle-all { display: block; }
+
   #toast {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: var(--accent); color: #090d16; font-weight: 700;
-    font-size: 0.8rem; padding: 8px 16px; border-radius: 99px;
+    font-size: 0.9rem; padding: 10px 20px; border-radius: 99px;
     opacity: 0; pointer-events: none; transition: opacity 0.2s;
   }
   #toast.show { opacity: 1; }
@@ -80,103 +121,172 @@
     <div id="status" class="badge"><span class="dot"></span><span id="sText">Kobler til...</span></div>
   </header>
 
-  <!-- VARMEPUMPE -->
-  <div class="card">
-    <div class="card-title">Varmepumpe</div>
-    <div class="seg-2">
-      <button id="hp-on" class="power-on" onclick="setHpPower(true)">PÅ</button>
-      <button id="hp-off" class="active" onclick="setHpPower(false)">AV</button>
+  <!-- TV-MODE HERO PANEL (Only shown on TV / Large Screen) -->
+  <div id="tv-hero">
+    <button id="tv-kino-main" class="tv-kino-btn" autofocus onclick="send('LP:SET_SCENE,KINO-MODUS;')">
+      🎬 Kinomodus
+    </button>
+    <div class="tv-sub-row">
+      <button class="tv-sub-btn" onclick="send('LP:SET_SCENE,KINO-AV;')">💡 Kinomodus av</button>
+      <button class="tv-sub-btn" onclick="setHpPower(false)">❄️ Varmepumpe av</button>
     </div>
-
-    <div class="thermo">
-      <button class="temp-btn" onclick="adjTemp(-1)">−</button>
-      <div class="temp-display" id="tVal">21°</div>
-      <button class="temp-btn" onclick="adjTemp(1)">+</button>
-    </div>
-
-    <div class="label">Modus</div>
-    <div class="seg-3" id="mode-group">
-      <button class="active" onclick="setHpMode(this, 4)">☀️ Varme</button>
-      <button onclick="setHpMode(this, 1)">❄️ Kjøling</button>
-      <button onclick="setHpMode(this, 0)">🔄 Auto</button>
-    </div>
-
-    <div class="label">Vifte & Swing</div>
-    <div class="seg-4" id="fan-group">
-      <button onclick="setHpFan(this, 0)">Auto</button>
-      <button onclick="setHpFan(this, 4)">Stille</button>
-      <button class="active" onclick="setHpFan(this, 2)">Med</button>
-      <button onclick="setHpFan(this, 1)">Høy</button>
-    </div>
-    <div class="seg-2" id="swing-group" style="margin-top:8px">
-      <button onclick="setHpSwing(this, 'ON')">Swing PÅ</button>
-      <button class="active" onclick="setHpSwing(this, 'OFF')">Swing AV</button>
-    </div>
+    <button id="tv-toggle-all" onclick="toggleTvDetails()">Vis / skjul alle kontroller</button>
   </div>
 
-  <!-- SCENER -->
-  <div class="card">
-    <div class="card-title">Scener</div>
-    <div class="seg-3">
-      <button onclick="send('LP:SET_ALL,ON;')">💡 Alle På</button>
-      <button onclick="send('LP:SET_ALL,OFF;')">🌑 Alle Av</button>
-      <button onclick="send('LP:SET_SCENE,KINO-MODUS;')">🎬 Kino</button>
-    </div>
-  </div>
+  <!-- STANDARD CONTROLS -->
+  <div id="phone-controls">
+    <!-- VARMEPUMPE -->
+    <div class="card">
+      <div class="card-title">Varmepumpe</div>
+      <div class="seg-2">
+        <button id="hp-on" class="power-on" onclick="setHpPower(true)">PÅ</button>
+        <button id="hp-off" class="active" onclick="setHpPower(false)">AV</button>
+      </div>
 
-  <!-- LYSSTYRING -->
-  <div class="card">
-    <div class="card-title">Lysstyring</div>
-    <div class="light-row">
-      <span class="light-name">Nexa Lys 1</span>
-      <div class="pill-group" id="l1">
-        <button onclick="pick(this,'l1'); send('LP:SET_LIGHT,1,ON;')">PÅ</button>
-        <button onclick="pick(this,'l1'); send('LP:SET_LIGHT,1,OFF;')">AV</button>
+      <div class="thermo">
+        <button class="temp-btn" onclick="adjTemp(-1)">−</button>
+        <div class="temp-display" id="tVal">22°</div>
+        <button class="temp-btn" onclick="adjTemp(1)">+</button>
       </div>
-    </div>
-    <div class="light-row">
-      <span class="light-name">Nexa Lys 2</span>
-      <div class="pill-group" id="l2">
-        <button onclick="pick(this,'l2'); send('LP:SET_LIGHT,2,ON;')">PÅ</button>
-        <button onclick="pick(this,'l2'); send('LP:SET_LIGHT,2,OFF;')">AV</button>
+
+      <div class="label">Modus</div>
+      <div class="seg-3" id="mode-group">
+        <button class="active" onclick="setHpMode(this, 4)">☀️ Varme</button>
+        <button onclick="setHpMode(this, 1)">❄️ Kjøling</button>
+        <button onclick="setHpMode(this, 0)">🔄 Auto</button>
       </div>
-    </div>
-    <div class="light-row">
-      <span class="light-name">Nexa Lys 3</span>
-      <div class="pill-group" id="l3">
-        <button onclick="pick(this,'l3'); send('LP:SET_LIGHT,3,ON;')">PÅ</button>
-        <button onclick="pick(this,'l3'); send('LP:SET_LIGHT,3,OFF;')">AV</button>
+
+      <div class="label">Vifte & Swing</div>
+      <div class="seg-4" id="fan-group">
+        <button class="active" onclick="setHpFan(this, 0)">Auto</button>
+        <button onclick="setHpFan(this, 4)">Stille</button>
+        <button onclick="setHpFan(this, 2)">Med</button>
+        <button onclick="setHpFan(this, 1)">Høy</button>
       </div>
-    </div>
-    <div class="light-row">
-      <span class="light-name">Lysbryter (4)</span>
-      <div class="pill-group" id="l4">
-        <button onclick="pick(this,'l4'); send('LP:SET_LIGHT,4,ON;')">PÅ</button>
-        <button onclick="pick(this,'l4'); send('LP:SET_LIGHT,4,OFF;')">AV</button>
+      <div class="seg-2" id="swing-group" style="margin-top:8px">
+        <button class="active" onclick="setHpSwing(this, 'ON')">Swing PÅ</button>
+        <button onclick="setHpSwing(this, 'OFF')">Swing AV</button>
       </div>
     </div>
 
-    <div class="label" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
-      <span>Spisestue Dimmer (<span id="dVal">50</span>%)</span>
-      <button style="padding:4px 10px;font-size:0.75rem" onclick="send('LP:SET_DIMMER,7,OFF;')">AV</button>
-    </div>
-    <input type="range" min="0" max="100" step="5" value="50"
-      oninput="document.getElementById('dVal').innerText=this.value"
-      onchange="send('LP:SET_DIMMER,7,'+this.value+';')">
+    <!-- SCENER & HOVEDLYS -->
+    <div class="card">
+      <div class="card-title">Scener</div>
+      <div class="seg-2" style="margin-bottom:8px">
+        <button onclick="send('LP:SET_SCENE,KINO-MODUS;')">🎬 Kinomodus</button>
+        <button onclick="send('LP:SET_SCENE,KINO-AV;')">💡 Kinomodus Av</button>
+      </div>
+      <div class="seg-2">
+        <button onclick="send('LP:SET_ALL,ON;')">☀️ Alle På</button>
+        <button onclick="send('LP:SET_ALL,OFF;')">🌑 Alle Av</button>
+      </div>
 
-    <div class="label">IR LED-stripe</div>
-    <div class="seg-4" style="margin-bottom:8px">
-      <button onclick="send('LP:SET_DIMMER,9,ON;')">PÅ</button>
-      <button onclick="send('LP:SET_DIMMER,9,OFF;')">AV</button>
-      <button onclick="send('LP:SET_DIMMER,9,DOWN;')">− Lav</button>
-      <button onclick="send('LP:SET_DIMMER,9,UP;')">+ Høy</button>
+      <div class="label" style="margin-top:16px">IR LED-stripe</div>
+      <div class="seg-4" style="margin-bottom:8px">
+        <button onclick="send('LP:SET_DIMMER,9,ON;')">PÅ</button>
+        <button onclick="send('LP:SET_DIMMER,9,OFF;')">AV</button>
+        <button onclick="send('LP:SET_DIMMER,9,DOWN;')">− Lav</button>
+        <button onclick="send('LP:SET_DIMMER,9,UP;')">+ Høy</button>
+      </div>
+      <div class="seg-5" id="led-group">
+        <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,KINO;')">🎬 Kino</button>
+        <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,25;')">25%</button>
+        <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,50;')">50%</button>
+        <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,75;')">75%</button>
+        <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,100;')">100%</button>
+      </div>
+
+      <div class="label" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+        <span>Spisestue Dimmer (<span id="dVal">50</span>%)</span>
+        <button style="padding:4px 10px;font-size:0.75rem" onclick="send('LP:SET_DIMMER,7,OFF;')">AV</button>
+      </div>
+      <input type="range" min="0" max="100" step="5" value="50"
+        oninput="document.getElementById('dVal').innerText=this.value"
+        onchange="send('LP:SET_DIMMER,7,'+this.value+';')">
     </div>
-    <div class="seg-5" id="led-group">
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,KINO;')">🎬 Kino</button>
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,25;')">25%</button>
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,50;')">50%</button>
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,75;')">75%</button>
-      <button onclick="pick(this,'led-group'); send('LP:SET_DIMMER,9,100;')">100%</button>
+
+    <!-- LYSSTYRING (GRUPPER + 7 INDIVIDUELLE STIKK) -->
+    <div class="card">
+      <div class="card-title">Fjernkontroll & Veggbryter</div>
+      <div class="light-row">
+        <span class="light-name">Nexa Gruppe 1</span>
+        <div class="pill-group" id="l1">
+          <button onclick="pick(this,'l1'); send('LP:SET_LIGHT,1,ON;')">PÅ</button>
+          <button onclick="pick(this,'l1'); send('LP:SET_LIGHT,1,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Nexa Gruppe 2</span>
+        <div class="pill-group" id="l2">
+          <button onclick="pick(this,'l2'); send('LP:SET_LIGHT,2,ON;')">PÅ</button>
+          <button onclick="pick(this,'l2'); send('LP:SET_LIGHT,2,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Nexa Gruppe 3</span>
+        <div class="pill-group" id="l3">
+          <button onclick="pick(this,'l3'); send('LP:SET_LIGHT,3,ON;')">PÅ</button>
+          <button onclick="pick(this,'l3'); send('LP:SET_LIGHT,3,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Lysbryter (4)</span>
+        <div class="pill-group" id="l4">
+          <button onclick="pick(this,'l4'); send('LP:SET_LIGHT,4,ON;')">PÅ</button>
+          <button onclick="pick(this,'l4'); send('LP:SET_LIGHT,4,OFF;')">AV</button>
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top:16px">Individuelle Nexa-stikk (1–7)</div>
+      <div class="light-row">
+        <span class="light-name">Stikk 1</span>
+        <div class="pill-group" id="l5">
+          <button onclick="pick(this,'l5'); send('LP:SET_LIGHT,5,ON;')">PÅ</button>
+          <button onclick="pick(this,'l5'); send('LP:SET_LIGHT,5,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 2</span>
+        <div class="pill-group" id="l6">
+          <button onclick="pick(this,'l6'); send('LP:SET_LIGHT,6,ON;')">PÅ</button>
+          <button onclick="pick(this,'l6'); send('LP:SET_LIGHT,6,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 3</span>
+        <div class="pill-group" id="l7">
+          <button onclick="pick(this,'l7'); send('LP:SET_LIGHT,7,ON;')">PÅ</button>
+          <button onclick="pick(this,'l7'); send('LP:SET_LIGHT,7,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 4</span>
+        <div class="pill-group" id="l8">
+          <button onclick="pick(this,'l8'); send('LP:SET_LIGHT,8,ON;')">PÅ</button>
+          <button onclick="pick(this,'l8'); send('LP:SET_LIGHT,8,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 5</span>
+        <div class="pill-group" id="l9">
+          <button onclick="pick(this,'l9'); send('LP:SET_LIGHT,9,ON;')">PÅ</button>
+          <button onclick="pick(this,'l9'); send('LP:SET_LIGHT,9,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 6</span>
+        <div class="pill-group" id="l10">
+          <button onclick="pick(this,'l10'); send('LP:SET_LIGHT,10,ON;')">PÅ</button>
+          <button onclick="pick(this,'l10'); send('LP:SET_LIGHT,10,OFF;')">AV</button>
+        </div>
+      </div>
+      <div class="light-row">
+        <span class="light-name">Stikk 7</span>
+        <div class="pill-group" id="l11">
+          <button onclick="pick(this,'l11'); send('LP:SET_LIGHT,11,ON;')">PÅ</button>
+          <button onclick="pick(this,'l11'); send('LP:SET_LIGHT,11,OFF;')">AV</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -189,6 +299,24 @@ const badge = document.getElementById("status");
 const sText = document.getElementById("sText");
 let client = null;
 
+// Detect Samsung Tizen TV or Wide Screen (>= 768px)
+function checkTvMode() {
+  const isTv = window.innerWidth >= 768 || /Tizen|SmartTV|SMART-TV/i.test(navigator.userAgent);
+  if (isTv) {
+    document.body.classList.add("tv-mode", "hide-details");
+    const mainBtn = document.getElementById("tv-kino-main");
+    if (mainBtn) setTimeout(() => mainBtn.focus(), 100);
+  } else {
+    document.body.classList.remove("tv-mode", "hide-details");
+  }
+}
+window.addEventListener("DOMContentLoaded", checkTvMode);
+window.addEventListener("resize", checkTvMode);
+
+function toggleTvDetails() {
+  document.body.classList.toggle("hide-details");
+}
+
 if (isLocal) {
   badge.classList.add("online");
   sText.innerText = "Lokal WiFi";
@@ -197,14 +325,13 @@ if (isLocal) {
   client.on("connect", () => { badge.classList.add("online"); sText.innerText = "Tilkoblet"; });
 }
 
-// Unified Heat Pump State (Always sends all parameters together)
-let hp = { power: false, temp: 21, mode: 4, fan: 2, swing: "OFF" };
+// Default Heat Pump State: 22°C, Varme (4), Auto Fan (0), Swing ON
+let hp = { power: false, temp: 22, mode: 4, fan: 0, swing: "ON" };
 
 function sendHpState(turnOnSwitch = false) {
   if (!hp.power) {
     send("HP:OFF;");
   } else {
-    // Sends PowerTrigger, Temp, Mode, Fan, Swing in one atomic packet
     const pwrFlag = turnOnSwitch ? "WAKE" : "ON";
     send(`HP:STATE,${pwrFlag},${hp.temp},${hp.mode},${hp.fan},${hp.swing};`);
   }
@@ -283,3 +410,4 @@ function send(cmd) {
 </script>
 </body>
 </html>
+)rawliteral";
