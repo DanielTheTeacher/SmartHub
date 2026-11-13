@@ -66,7 +66,37 @@
   .pill-group button { padding: 8px 16px; font-size: 0.85rem; }
   input[type=range] { width: 100%; accent-color: var(--accent); height: 6px; background: var(--bg); border-radius: 8px; margin-top: 6px; }
 
-  /* TV HERO PANEL (Hidden on mobile, centered on TV / wide screens) */
+  /* SCHEDULE QUEUE STYLES */
+  input[type=datetime-local], input[type=time] {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 11px 12px; font-size: 0.92rem; font-family: inherit;
+    color-scheme: dark; margin-top: 8px;
+  }
+  .add-btn {
+    width: 100%; margin-top: 10px;
+    background: rgba(56, 189, 248, 0.18); color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .q-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .q-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .q-info { display: flex; flex-direction: column; gap: 2px; }
+  .q-tag { font-size: 0.78rem; font-weight: 700; }
+  .q-tag.on { color: var(--green); }
+  .q-tag.off { color: var(--red); }
+  .q-time { font-size: 0.88rem; color: var(--text); }
+  .q-del {
+    background: rgba(239, 68, 68, 0.15); color: var(--red);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    padding: 6px 12px; border-radius: 10px; font-size: 0.85rem;
+  }
+  .q-empty { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 8px 0; }
+
+  /* TV HERO PANEL */
   #tv-hero { display: none; }
   body.tv-mode {
     max-width: 1100px; min-height: 92vh;
@@ -83,17 +113,13 @@
     background: linear-gradient(135deg, #0284c7, #38bdf8); color: #090d16;
     border: 4px solid transparent; box-shadow: 0 12px 35px rgba(56, 189, 248, 0.25);
   }
-  .tv-kino-btn:focus, .tv-kino-btn:hover {
-    border-color: #ffffff; transform: scale(1.02);
-  }
+  .tv-kino-btn:focus, .tv-kino-btn:hover { border-color: #ffffff; transform: scale(1.02); }
   .tv-sub-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   .tv-sub-btn {
     font-size: 1.75rem; font-weight: 700; padding: 34px 20px;
     border-radius: 20px; background: var(--btn); border: 3px solid var(--border);
   }
-  .tv-sub-btn:focus, .tv-sub-btn:hover {
-    border-color: var(--accent); background: #26354d;
-  }
+  .tv-sub-btn:focus, .tv-sub-btn:hover { border-color: var(--accent); background: #26354d; }
   body.tv-mode.hide-details #phone-controls { display: none; }
   body.tv-mode #phone-controls {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start;
@@ -120,7 +146,7 @@
     <div id="status" class="badge"><span class="dot"></span><span id="sText">Kobler til...</span></div>
   </header>
 
-  <!-- TV-MODE HERO PANEL (Only shown on TV / Large Screen) -->
+  <!-- TV-MODE HERO PANEL -->
   <div id="tv-hero">
     <button id="tv-kino-main" class="tv-kino-btn" autofocus onclick="send('LP:SET_SCENE,KINO-MODUS;')">
       🎬 Kinomodus
@@ -134,7 +160,7 @@
 
   <!-- STANDARD CONTROLS -->
   <div id="phone-controls">
-    <!-- VARMEPUMPE -->
+    <!-- VARMEPUMPE + TIMER/KALENDER KØ -->
     <div class="card">
       <div class="card-title">Varmepumpe</div>
       <div class="seg-2">
@@ -165,6 +191,26 @@
       <div class="seg-2" id="swing-group" style="margin-top:8px">
         <button class="active" onclick="setHpSwing(this, 'ON')">Swing PÅ</button>
         <button onclick="setHpSwing(this, 'OFF')">Swing AV</button>
+      </div>
+
+      <!-- TIMER & KALENDER KØ -->
+      <div class="card-title" style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border)">
+        Tidsplan & Kø
+      </div>
+      <div class="seg-2" id="sched-act-group">
+        <button class="active" onclick="setSchedAct(this, 'ON')">Slå PÅ (22°)</button>
+        <button onclick="setSchedAct(this, 'OFF')">Slå AV</button>
+      </div>
+      <div class="seg-2" id="sched-type-group" style="margin-top:8px">
+        <button class="active" onclick="setSchedType(this, 'ONCE')">📅 Dato & Tid</button>
+        <button onclick="setSchedType(this, 'DAILY')">🔁 Daglig</button>
+      </div>
+      <input type="datetime-local" id="sched-dt">
+      <input type="time" id="sched-tm" value="08:00" style="display:none">
+      <button class="add-btn" onclick="addSched()">+ Legg til i kø</button>
+
+      <div class="q-list" id="q-list">
+        <div class="q-empty">Ingen planlagte hendelser</div>
       </div>
     </div>
 
@@ -204,7 +250,7 @@
         onchange="send('LP:SET_DIMMER,7,'+this.value+';')">
     </div>
 
-    <!-- LYSSTYRING (GRUPPER + 7 INDIVIDUELLE STIKK) -->
+    <!-- LYSSTYRING -->
     <div class="card">
       <div class="card-title">Fjernkontroll & Veggbryter</div>
       <div class="light-row">
@@ -293,12 +339,12 @@
 
 <script>
 const TOPIC = "hubbabubba/danie_9842_secret/cmd";
+const SCHED_TOPIC = "hubbabubba/danie_9842_secret/sched";
 const isLocal = location.hostname.startsWith("10.") || location.hostname.startsWith("192.");
 const badge = document.getElementById("status");
 const sText = document.getElementById("sText");
 let client = null;
 
-// Detect Samsung Tizen TV or Wide Screen (>= 768px)
 function checkTvMode() {
   const isTv = window.innerWidth >= 768 || /Tizen|SmartTV|SMART-TV/i.test(navigator.userAgent);
   if (isTv) {
@@ -309,7 +355,16 @@ function checkTvMode() {
     document.body.classList.remove("tv-mode", "hide-details");
   }
 }
-window.addEventListener("DOMContentLoaded", checkTvMode);
+
+window.addEventListener("DOMContentLoaded", () => {
+  checkTvMode();
+  const d = new Date(Date.now() + 3600000);
+  d.setMinutes(0, 0, 0);
+  const pad = n => String(n).padStart(2, "0");
+  document.getElementById("sched-dt").value =
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+  if (isLocal) fetchLocalSchedule();
+});
 window.addEventListener("resize", checkTvMode);
 
 function toggleTvDetails() {
@@ -321,18 +376,93 @@ if (isLocal) {
   sText.innerText = "Lokal WiFi";
 } else {
   client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
-  client.on("connect", () => { badge.classList.add("online"); sText.innerText = "Tilkoblet"; });
+  client.on("connect", () => {
+    badge.classList.add("online");
+    sText.innerText = "Tilkoblet";
+    client.subscribe(SCHED_TOPIC);
+    client.publish(TOPIC, "HP:SCHED_SYNC;");
+  });
+  client.on("message", (t, payload) => {
+    if (t === SCHED_TOPIC) {
+      try { renderSchedule(JSON.parse(payload.toString())); } catch(e) {}
+    }
+  });
 }
 
-// Default Heat Pump State: 22°C, Varme (4), Auto Fan (0), Swing ON
+// Schedule Queue UI Logic
+let schedAct = "ON";
+let schedType = "ONCE";
+
+function setSchedAct(btn, act) {
+  pick(btn, "sched-act-group");
+  schedAct = act;
+}
+
+function setSchedType(btn, tp) {
+  pick(btn, "sched-type-group");
+  schedType = tp;
+  document.getElementById("sched-dt").style.display = tp === "ONCE" ? "block" : "none";
+  document.getElementById("sched-tm").style.display = tp === "DAILY" ? "block" : "none";
+}
+
+function addSched() {
+  if (schedType === "ONCE") {
+    const val = document.getElementById("sched-dt").value;
+    if (!val) return;
+    const ep = Math.floor(new Date(val).getTime() / 1000);
+    send(`HP:SCHED_ADD,${schedAct},ONCE,${ep},0,0;`);
+  } else {
+    const val = document.getElementById("sched-tm").value;
+    if (!val) return;
+    const [hh, mm] = val.split(":");
+    send(`HP:SCHED_ADD,${schedAct},DAILY,0,${parseInt(hh)},${parseInt(mm)};`);
+  }
+}
+
+function delSched(id) {
+  send(`HP:SCHED_DEL,${id};`);
+}
+
+function fetchLocalSchedule() {
+  fetch("/schedule").then(r => r.json()).then(renderSchedule).catch(() => {});
+}
+
+function renderSchedule(data) {
+  const list = document.getElementById("q-list");
+  if (!data || !data.items || data.items.length === 0) {
+    list.innerHTML = `<div class="q-empty">Ingen planlagte hendelser</div>`;
+    return;
+  }
+  const pad = n => String(n).padStart(2, "0");
+  const sorted = [...data.items].sort((a, b) => (a.ep || 9999999999) - (b.ep || 9999999999));
+  list.innerHTML = sorted.map(item => {
+    let timeLabel = "";
+    if (item.daily) {
+      timeLabel = `Daglig kl. ${pad(item.hh)}:${pad(item.mm)}`;
+    } else {
+      const dt = new Date(item.ep * 1000);
+      timeLabel = `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} kl. ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
+    return `
+      <div class="q-item">
+        <div class="q-info">
+          <span class="q-tag ${item.on ? "on" : "off"}">${item.on ? "☀️ SLÅ PÅ (22°)" : "❄️ SLÅ AV"}</span>
+          <span class="q-time">${timeLabel}</span>
+        </div>
+        <button class="q-del" onclick="delSched(${item.id})">✕</button>
+      </div>`;
+  }).join("");
+}
+
+// Defaults: 22°C, Varme (4), Auto Fan (0), Swing ON
 let hp = { power: false, temp: 22, mode: 4, fan: 0, swing: "ON" };
 
-function sendHpState(turnOnSwitch = false) {
+function sendHpState(turnOn = false) {
   if (!hp.power) {
     send("HP:OFF;");
   } else {
-    const pwrFlag = turnOnSwitch ? "WAKE" : "ON";
-    send(`HP:STATE,${pwrFlag},${hp.temp},${hp.mode},${hp.fan},${hp.swing};`);
+    const flag = turnOn ? "WAKE" : "ON";
+    send(`HP:STATE,${flag},${hp.temp},${hp.mode},${hp.fan},${hp.swing};`);
   }
 }
 
@@ -400,7 +530,8 @@ function showToast(msg) {
 
 function send(cmd) {
   if (isLocal) {
-    fetch("/command", { method: "POST", headers: {"Content-Type":"text/plain"}, body: cmd });
+    fetch("/command", { method: "POST", headers: {"Content-Type":"text/plain"}, body: cmd })
+      .then(() => { if (cmd.includes("SCHED_")) setTimeout(fetchLocalSchedule, 120); });
   } else if (client) {
     client.publish(TOPIC, cmd);
   }
